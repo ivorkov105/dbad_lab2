@@ -1,0 +1,22 @@
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+        <property name="hibernate.connection.driver_class">org.postgresql.Driver</property>
+        <property name="hibernate.connection.url">jdbc:postgresql://localhost:5432/dbad?characterEncoding=utf8</property>
+        <property name="hibernate.connection.username">admin</property>
+        <property name="hibernate.connection.password">admin1234</property>
+        <property name="hibernate.show_sql">false</property>
+        <property name="hibernate.current_session_context_class">thread</property>
+        <property name="hibernate.hbm2ddl.auto">update</property>
+
+        <mapping class="dbad.labs.dbad_lab1.data.entities.DepartmentEntity"/>
+        <mapping class="dbad.labs.dbad_lab1.data.entities.EmployeeEntity"/>
+        <mapping class="dbad.labs.dbad_lab1.data.entities.InventoryEntity"/>
+        <mapping class="dbad.labs.dbad_lab1.data.entities.PassportEntity"/>
+        <mapping class="dbad.labs.dbad_lab1.data.entities.ProductEntity"/>
+        <mapping class="dbad.labs.dbad_lab1.data.entities.SaleEntity"/>
+        <mapping class="dbad.labs.dbad_lab1.data.entities.ShopEntity"/>
+    </session-factory>
+</hibernate-configuration>
