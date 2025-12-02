@@ -34,7 +34,7 @@ public class EmployeeDAO {
         Transaction transaction = null;
         try (Session session = sessionFactory.openSession()) {
             transaction = session.beginTransaction();
-            session.persist(employee);
+            session.merge(employee);
             transaction.commit();
         } catch (Exception e) {
             if (transaction != null) {

@@ -335,7 +335,6 @@ public class CLI {
             System.out.println("Неверная дата, пропуск.");
         }
 
-        // ВЫБОР ОТДЕЛА ИЗ СПИСКА
         long deptId = selectEntity(
                 departmentService.findAll(),
                 DepartmentDTO::getDepartName,
@@ -474,18 +473,21 @@ public class CLI {
                     }
                     case "3" -> {
                         SaleDTO dto = new SaleDTO();
-                        fillSale(dto);
-                        saleService.create(dto);
-                        System.out.println("Продажа зарегистрирована.");
+                        // true = это новая продажа, надо списать со склада
+                        if (fillSale(dto, true)) {
+                            saleService.create(dto);
+                            System.out.println("Продажа зарегистрирована.");
+                        }
                     }
                     case "4" -> {
                         System.out.print("Введите ID продажи для редактирования: ");
                         long id = readLong();
                         SaleDTO dto = new SaleDTO();
                         dto.setId(id);
-                        fillSale(dto);
-                        saleService.update(dto);
-                        System.out.println("Продажа обновлена.");
+                        if (fillSale(dto, false)) {
+                            saleService.update(dto);
+                            System.out.println("Продажа обновлена.");
+                        }
                     }
                     case "5" -> {
                         System.out.print("Введите ID продажи для удаления: ");
@@ -502,7 +504,7 @@ public class CLI {
         }
     }
 
-    private void fillSale(SaleDTO dto) {
+    private boolean fillSale(SaleDTO dto, boolean isNewSale) {
         System.out.print("Дата и время (YYYY-MM-DDTHH:MM, Enter=Сейчас): ");
         String dateStr = scanner.nextLine();
         if (dateStr.isBlank()) {
@@ -516,33 +518,76 @@ public class CLI {
             }
         }
 
-        System.out.print("Количество: ");
-        try {
-            dto.setQuantitySold(new BigDecimal(scanner.nextLine()));
-        } catch (Exception e) {
-            dto.setQuantitySold(BigDecimal.ZERO);
-        }
-
-        dto.setShopId(selectEntity(
+        long shopId = selectEntity(
                 shopService.findAll(),
                 ShopDTO::getShopName,
                 ShopDTO::getId,
                 "Магазин"
-        ));
+        );
+        if (shopId == 0) return false;
+        dto.setShopId(shopId);
 
-        dto.setProductId(selectEntity(
+        long productId = selectEntity(
                 productService.findAll(),
                 ProductDTO::getProdName,
                 ProductDTO::getId,
                 "Продукт"
-        ));
+        );
+        if (productId == 0) return false;
+        dto.setProductId(productId);
 
-        dto.setEmployeeId(selectEntity(
+        InventoryDTO inventoryItem = inventoryService.findAll().stream()
+                .filter(i -> i.getShopId() == shopId && i.getProductId() == productId)
+                .findFirst()
+                .orElse(null);
+
+        if (inventoryItem == null) {
+            System.out.println("ОШИБКА: Этого товара нет на складе выбранного магазина!");
+            return false;
+        }
+
+        BigDecimal available = inventoryItem.getQuantity();
+        System.out.println(">>> Доступно на складе: " + available);
+
+        BigDecimal quantitySold;
+        while (true) {
+            System.out.print("Введите количество для продажи: ");
+            try {
+                String qtyStr = scanner.nextLine();
+                quantitySold = new BigDecimal(qtyStr);
+
+                if (quantitySold.compareTo(BigDecimal.ZERO) <= 0) {
+                    System.out.println("Количество должно быть больше 0.");
+                    continue;
+                }
+
+                if (isNewSale && quantitySold.compareTo(available) > 0) {
+                    System.out.println("Ошибка: Недостаточно товара на складе! Максимум: " + available);
+                    continue;
+                }
+                break;
+            } catch (NumberFormatException e) {
+                System.out.println("Введите число.");
+            }
+        }
+        dto.setQuantitySold(quantitySold);
+
+        if (isNewSale) {
+            inventoryItem.setQuantity(available.subtract(quantitySold));
+            inventoryService.update(inventoryItem);
+            System.out.println(">>> Склад обновлен. Остаток: " + inventoryItem.getQuantity());
+        }
+
+        long empId = selectEntity(
                 employeeService.findAll(),
                 e -> e.getLastName() + " " + e.getFirstName(),
                 EmployeeDTO::getId,
                 "Продавца"
-        ));
+        );
+        if (empId == 0) return false;
+        dto.setEmployeeId(empId);
+
+        return true;
     }
 
     private void printSales(List<SaleDTO> list) {
@@ -655,7 +700,6 @@ public class CLI {
         for (int i = 0; i < list.size(); i++) {
             System.out.printf("%d. %s%n", i + 1, displayFunc.apply(list.get(i)));
         }
-        System.out.println("0. Не выбирать / Пропустить");
 
         System.out.print("Введите номер: ");
         while (true) {

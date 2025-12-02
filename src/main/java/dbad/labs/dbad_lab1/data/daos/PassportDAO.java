@@ -33,7 +33,7 @@ public class PassportDAO {
         Transaction transaction = null;
         try (Session session = sessionFactory.openSession()) {
             transaction = session.beginTransaction();
-            session.persist(passport);
+            session.merge(passport);
             transaction.commit();
         } catch (Exception e) {
             if (transaction != null) transaction.rollback();

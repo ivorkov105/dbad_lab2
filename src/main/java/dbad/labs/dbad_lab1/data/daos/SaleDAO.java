@@ -33,7 +33,7 @@ public class SaleDAO {
         Transaction transaction = null;
         try (Session session = sessionFactory.openSession()) {
             transaction = session.beginTransaction();
-            session.persist(sale);
+            session.merge(sale);
             transaction.commit();
         } catch (Exception e) {
             if (transaction != null) transaction.rollback();
